@@ -151,7 +151,7 @@ def verify_token(token):
         return {'error': 'Token InvalidoO.'}
 
 
-@app.route('/login', methods=['GET'], strict_slashes=False, endpoint='login')
+@app.route('/login', methods=['POST'], strict_slashes=False, endpoint='login')
 def login():
     """
     Inicia sesión y genera un token JWT si las credenciales del usuario son válidas.
