@@ -1,0 +1,33 @@
+# API - Sistema de Suscripciones y Usuarios
+
+## Descripción
+
+Este sistema permite gestionar usuarios, suscripciones y autenticación mediante tokens JWT. Los usuarios pueden registrarse, iniciar sesión, y suscribirse a planes premium o básicos. Los administradores pueden consultar y modificar el estado de suscripciones.
+
+---
+
+## Endpoints
+
+### POST /login/adduser
+
+Crea un nuevo usuario en la base de datos si no existe un usuario con el mismo email o teléfono.
+
+#### Requiere token JWT válido como parámetro en la URL (`?token=...`).
+
+#### 📥 JSON de entrada:
+```json
+{
+  "nombres": "Juan",
+  "apellidos": "Pérez",
+  "email": "juan@example.com",
+  "password": "123456",
+  "tipo": "ADMIN",
+  "telefono": "5512345678"
+}
+
+📤 JSON de salida (éxito):
+{
+  "message": "Se creo el usuario exitosamente",
+  "response": true
+}
+
