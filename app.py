@@ -88,27 +88,8 @@ def index():
     Returns:
         Response: La redirección a la ruta de inicio de sesión si el usuario no está autenticado.
     """
-    # Verificar si el token está presente
-    token = request.headers.get('Authorization')
+    return redirect(url_for('login_form'))
 
-    if not token:
-        # Si no hay token, redirige al login
-        print('No hay token')
-        return redirect(url_for('login_form'))
-
-    try:
-        # Decodificar el token para verificar su validez
-        decoded_token = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-
-        # Si el token es válido, se redirige a la página principal
-        return redirect(url_for('suscripcion_usuario'))  # o a cualquier otra página
-
-    except jwt.ExpiredSignatureError:
-        # Si el token ha expirado, redirige al login
-        return redirect(url_for('login_form'))
-    except jwt.InvalidTokenError:
-        # Si el token no es válido, redirige al login
-        return redirect(url_for('login_form'))
 
 
 def generate_token():
@@ -353,12 +334,11 @@ def adduser():
         output['body'] = 'No se proporciono body'
         return jsonify(output), 400
 
-    con = connectdb()
-    if con == False:
-        output['message'] = 'No se puede conectar a la BD'
-        return jsonify(output), 401
+    connection = connectdb()
+    if isinstance(connection, Exception):
+        return jsonify({'error': 'Error al conectar con la base de datos'}), 500
 
-    cur = con.cursor()
+    cur = connection.cursor()
     try:
 
         print('Se obtiene la informacion propocionada para validar no exista la cuenta')
@@ -387,9 +367,9 @@ def adduser():
                 print('No se encontro el telefono en la BD, se procede a crear cuenta')
                 fecha_hoy = datetime.datetime.today().strftime('%Y-%m-%d %H:%M')
                 print('Se hace insert a la tabla usuario para crear el usuario')
-                cur = con.cursor()
+                cur = connection.cursor()
                 query = f"insert into usuario values (default, '{nombres}', '{apellidos}', '{email}'," \
-                        f"'{md5_hash}', '{tipo}', '{telefono}', '{fecha_hoy}')"
+                        f"'{md5_hash}', '{tipo}', '{telefono}', '{fecha_hoy}' ,true)"
                 print(query)
                 cur.execute(query)
 
@@ -402,11 +382,12 @@ def adduser():
     output['message'] = 'Se creo el usuario exitosamente'
     output['response'] = True
 
-    con.commit()
+    connection.commit()
     cur.close()
-    con.close()
+    connection.close()
     print('Ejecucion correcta')
     return jsonify(output), 200
+
 
 
 @app.route('/login/suscribir', methods=['POST'])
@@ -453,12 +434,12 @@ def suscribir():
         return jsonify({'plan': 'El plan debe ser "premium" o "basico"'}), 400
 
     # Verificar usuario en base de datos
-    con = connectdb()
-    if con == False:
-        return jsonify({'error': 'No se puede conectar a la BD'}), 500
+    connection = connectdb()
+    if isinstance(connection, Exception):
+        return jsonify({'error': 'Error al conectar con la base de datos'}), 500
 
     try:
-        cur = con.cursor()
+        cur = connection.cursor()
         query = f"SELECT * FROM usuario WHERE email = '{email}'"
         cur.execute(query)
         usuario = cur.fetchone()
@@ -468,14 +449,15 @@ def suscribir():
         # Actualizar suscripción
         update_query = f"UPDATE usuario SET tipo = '{plan}' WHERE email = '{email}'"
         cur.execute(update_query)
-        con.commit()
+        connection.commit()
         cur.close()
-        con.close()
+        connection.close()
 
         return jsonify({'message': f'Suscripcion al plan {plan} realizada con exito'}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 
 @app.route('/login/estado_suscripcion', methods=['POST'])
@@ -517,13 +499,12 @@ def estado_suscripcion():
         output['email'] = 'No se proporciono el campo o esta vacio'
         return jsonify(output), 400
 
-    con = connectdb()
-    if con == False:
-        output['message'] = 'No se puede conectar a la BD'
-        return jsonify(output), 500
+    connection = connectdb()
+    if isinstance(connection, Exception):
+        return jsonify({'error': 'Error al conectar con la base de datos'}), 500
 
     try:
-        cur = con.cursor()
+        cur = connection.cursor()
 
         # Verificar existencia del usuario y estado
         print('Consultando estado de suscripcion')
@@ -548,7 +529,7 @@ def estado_suscripcion():
         output['Usuario'] = email
         print('Ejecucion correcta')
         cur.close()
-        con.close()
+        connection.close()
         return jsonify(output), 200
 
     except Exception as e:
@@ -594,12 +575,12 @@ def actualizar_suscripcion(id):
     if not accion:
         return jsonify({'error': 'No se proporciono la accion'}), 400
 
-    con = connectdb()
-    if con == False:
-        return jsonify({'error': 'No se puede conectar a la BD'}), 500
+    connection = connectdb()
+    if isinstance(connection, Exception):
+        return jsonify({'error': 'Error al conectar con la base de datos'}), 500
 
     try:
-        cur = con.cursor()
+        cur = connection.cursor()
 
         # Validar que el usuario exista
         cur.execute(f"SELECT id FROM usuario WHERE id = {id}")
@@ -629,9 +610,9 @@ def actualizar_suscripcion(id):
         else:
             return jsonify({'error': 'Accion invalida, debe ser "cancelar" o "actualizar"'}), 400
 
-        con.commit()
+        connection.commit()
         cur.close()
-        con.close()
+        connection.close()
         return jsonify({'message': mensaje, 'response': True}), 200
 
     except Exception as e:
@@ -749,7 +730,6 @@ def get_suscripcion_usuario():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 
 
 if __name__ == '__main__':
