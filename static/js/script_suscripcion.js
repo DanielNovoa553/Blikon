@@ -9,12 +9,9 @@ document.addEventListener("DOMContentLoaded", function() {
         return;
     }
 
-    fetch(`/get_suscripcion_usuario?email=${encodeURIComponent(email)}`, {
+    fetch(`/get_suscripcion_usuario?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`, {
         method: 'GET',
-        headers: {
-            'Authorization': token  // Envía el token en el encabezado Authorization
 
-        }
     })
     .then(response => response.json())
     .then(data => {

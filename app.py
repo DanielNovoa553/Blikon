@@ -1,7 +1,7 @@
 from datetime import datetime
 from db_data import connectdb
 import datetime
-from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
+from flask import Flask, request, jsonify, render_template, redirect, url_for, make_response
 from flask_cors import CORS, cross_origin
 import jwt
 import hashlib
@@ -396,7 +396,7 @@ def adduser():
     except Exception as e:
         print(e)
         print('Ocurrio un error al crear al usuario en la BD')
-        output['message'] = 'Ocurrio un error al crear al usuario en la BD'
+        output['message'] = 'Ocurrio un error al crear al usuario en la BD' + str(e)
         return jsonify(output), 500
 
     output['message'] = 'Se creo el usuario exitosamente'
@@ -553,7 +553,7 @@ def estado_suscripcion():
 
     except Exception as e:
         print(e)
-        output['message'] = 'Ocurrio un error al consultar el estado de suscripcion'
+        output['message'] = 'Ocurrio un error al consultar el estado de suscripcion ' +str(e)
         return jsonify(output), 500
 
 
@@ -636,10 +636,10 @@ def actualizar_suscripcion(id):
 
     except Exception as e:
         print(e)
-        return jsonify({'error': 'Error al actualizar suscripcion'}), 500
+        return jsonify({'error': 'Error al actualizar suscripcion' + str(e)}), 500
 
 
-from flask import make_response
+
 
 @app.route('/login_form', methods=['GET'])
 def login_form():
@@ -685,6 +685,7 @@ def suscripcion_usuario():
     return response
 
 
+
 @app.route('/get_suscripcion_usuario', methods=['GET'])
 def get_suscripcion_usuario():
     """
@@ -708,11 +709,15 @@ def get_suscripcion_usuario():
         500: Si ocurre un error al conectar con la base de datos.
         404: Si no se encuentra un usuario con el correo proporcionado.
     """
-    token = request.headers.get('Authorization')
+    token = request.args.get('token')
     email = request.args.get('email')
 
     if not token:
         return jsonify({'error': 'Token is missing!'}), 403
+
+    payload = verify_token(token)
+    if 'error' in payload:
+        return jsonify(payload), 401
 
     try:
         # Consultar los detalles del usuario por email
@@ -742,10 +747,9 @@ def get_suscripcion_usuario():
             connection.close()
             return jsonify({'error': 'User not found'}), 404
 
-    except jwt.ExpiredSignatureError:
-        return jsonify({'error': 'Token expired'}), 401
-    except jwt.InvalidTokenError:
-        return jsonify({'error': 'Invalid token'}), 401
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 
 if __name__ == '__main__':
