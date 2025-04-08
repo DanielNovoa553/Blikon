@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", function() {
             document.getElementById('email').textContent = data.email;
             document.getElementById('telefono').textContent = data.telefono;
             document.getElementById('tipo').textContent = data.tipo;
-            if (data.estado_suscripcion === true) {
+            if (data.estado_suscripcion === True) {
                 document.getElementById('estado_suscripcion').textContent = "Activa";
             }
             else {
