@@ -447,7 +447,8 @@ def suscribir():
             return jsonify({'error': 'El usuario no existe'}), 401
 
         # Actualizar suscripción
-        update_query = f"UPDATE usuario SET tipo = '{plan}' WHERE email = '{email}'"
+        estado_suscripcion = True
+        update_query = f"UPDATE usuario SET tipo = '{plan}', estado_suscripcion = {estado_suscripcion} WHERE email = '{email}'"
         cur.execute(update_query)
         connection.commit()
         cur.close()
