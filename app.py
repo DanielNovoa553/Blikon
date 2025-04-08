@@ -1,10 +1,12 @@
 from datetime import datetime
 from db_data import connectdb
 import datetime
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
 from flask_cors import CORS, cross_origin
 import jwt
 import hashlib
+
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = '3643dcdf2beb1ace0f0dd02019e9bee9'
 CORS(app, support_credentials=True)
@@ -75,15 +77,38 @@ def getInput(inputIn):
         return str(inputIn)
 
 
-'#--------------------------------------------Servicio Raiz-----------------------------------------------------------'
+@app.route('/')
+def index():
+    """
+    Redirige a la página de inicio de sesión si el usuario no está autenticado.
 
+    Esta ruta maneja las solicitudes a la raíz del sitio ('/'). Si un usuario accede a la raíz
+    sin estar autenticado, será redirigido automáticamente a la página de inicio de sesión.
 
-@app.route("/", methods=['POST', 'GET'])
-def principal_metodo():
-    return "Servicio Raiz"
+    Returns:
+        Response: La redirección a la ruta de inicio de sesión si el usuario no está autenticado.
+    """
+    # Verificar si el token está presente
+    token = request.headers.get('Authorization')
 
+    if not token:
+        # Si no hay token, redirige al login
+        print('No hay token')
+        return redirect(url_for('login_form'))
 
-'#------------------------------------------------------Login----------------------------------------------------------'
+    try:
+        # Decodificar el token para verificar su validez
+        decoded_token = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+
+        # Si el token es válido, se redirige a la página principal
+        return redirect(url_for('suscripcion_usuario'))  # o a cualquier otra página
+
+    except jwt.ExpiredSignatureError:
+        # Si el token ha expirado, redirige al login
+        return redirect(url_for('login_form'))
+    except jwt.InvalidTokenError:
+        # Si el token no es válido, redirige al login
+        return redirect(url_for('login_form'))
 
 
 def generate_token():
@@ -179,7 +204,7 @@ def login():
         - La contraseña no se cifra en esta función, se compara directamente. Se recomienda aplicar hash (por ejemplo, MD5 o SHA256).
         - El token se genera mediante la función `generate_token()`.
     """
-
+    print('endpoint login alzanzado')
     connection = connectdb()
     if isinstance(connection, Exception):
         return jsonify({'Error al conectar con la base de datos, detalle: ': str(connection)})
@@ -204,7 +229,8 @@ def login():
                     return jsonify({'token': token[0],
                                     'status': 'Inicio de sesión exitoso.',
                                     'message': 'Token generado exitosamente.',
-                                    'expiration_time': expiration_time_mexico})
+                                    'expiration_time': expiration_time_mexico,
+                                    'email': email})
                 else:
                     connection.close()
                     cursor.close()
@@ -612,6 +638,114 @@ def actualizar_suscripcion(id):
         print(e)
         return jsonify({'error': 'Error al actualizar suscripcion'}), 500
 
+
+from flask import make_response
+
+@app.route('/login_form', methods=['GET'])
+def login_form():
+    """
+    Renderiza el formulario de inicio de sesión.
+
+    Esta ruta sirve para mostrar el formulario que permite al usuario autenticarse.
+    Se incluyen cabeceras para evitar que la página sea almacenada en caché, previniendo
+    que el usuario pueda volver a páginas protegidas luego de cerrar sesión usando el botón "atrás".
+
+    Returns:
+        Response: El contenido HTML del formulario de login.
+    """
+    response = make_response(render_template('login_form.html'))
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
+
+
+@app.route('/suscripcion_usuario', methods=['GET'])
+def suscripcion_usuario():
+    """
+    Renderiza la página de detalles de la suscripción del usuario.
+
+    Esta ruta se utiliza para mostrar los detalles de la suscripción de un usuario que ha iniciado sesión.
+    Cuando se hace una solicitud GET a esta ruta, se devuelve el archivo
+    'suscripcion_usuario.html', que contiene la información relevante sobre la suscripción del usuario,
+    como nombres, apellidos, email, teléfono, tipo y estado de suscripción.
+
+    Se agregan cabeceras para evitar el almacenamiento en caché por parte del navegador,
+    previniendo que los datos permanezcan visibles tras cerrar sesión o navegar hacia atrás.
+
+    Returns:
+        Response: El contenido HTML de la página con los detalles de la suscripción del usuario.
+    """
+    response = make_response(render_template('suscripcion_usuario.html'))
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
+
+
+@app.route('/get_suscripcion_usuario', methods=['GET'])
+def get_suscripcion_usuario():
+    """
+    Obtiene los detalles de la suscripción de un usuario a partir de su correo electrónico.
+
+    Esta ruta es utilizada para recuperar la información detallada de la suscripción de un usuario.
+    El correo electrónico del usuario se pasa como un parámetro de consulta en la solicitud GET, y se
+    utiliza junto con el token de autorización para verificar la identidad del usuario y recuperar
+    sus detalles desde la base de datos.
+
+    Se devuelve la información del usuario, como nombres, apellidos, email, teléfono, tipo y estado de
+    la suscripción. Si no se encuentra al usuario o hay algún error, se devuelve un mensaje de error.
+
+    Returns:
+        Response: Un objeto JSON con los detalles de la suscripción del usuario si se encuentra, o un
+                  mensaje de error si no se encuentra o si ocurre un problema en la conexión.
+
+    Raises:
+        403: Si no se proporciona un token de autorización.
+        401: Si el token de autorización ha expirado o es inválido.
+        500: Si ocurre un error al conectar con la base de datos.
+        404: Si no se encuentra un usuario con el correo proporcionado.
+    """
+    token = request.headers.get('Authorization')
+    email = request.args.get('email')
+
+    if not token:
+        return jsonify({'error': 'Token is missing!'}), 403
+
+    try:
+        # Consultar los detalles del usuario por email
+        connection = connectdb()
+        if isinstance(connection, Exception):
+            return jsonify({'error': 'Error al conectar con la base de datos'}), 500
+
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            SELECT nombres, apellidos, email, telefono, tipo, estado_suscripcion 
+            FROM usuario WHERE email = %s
+        """, (email,))
+        user = cursor.fetchone()
+
+        if user:
+            connection.close()
+            return jsonify({
+                'nombres': user[0],
+                'apellidos': user[1],
+                'email': user[2],
+                'telefono': user[3],
+                'tipo': user[4],
+                'estado_suscripcion': user[5]
+            }), 200
+        else:
+            connection.close()
+            return jsonify({'error': 'User not found'}), 404
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expired'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Invalid token'}), 401
 
 
 if __name__ == '__main__':

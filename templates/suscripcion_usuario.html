@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suscripción de Usuario</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Header con enlace para cerrar sesión -->
+    <nav class="navbar navbar-light bg-light d-flex justify-content-end">
+      <a href="#" id="logoutLink" class="btn btn-outline-danger">Cerrar sesión</a>
+    </nav>
+
+
+    <div class="container mt-5">
+        <!-- Centrar el título -->
+        <div class="text-center mb-4">
+            <h2>Detalles de la Suscripción</h2>
+        </div>
+
+        <!-- Centrar la tabla -->
+        <div class="d-flex justify-content-center">
+            <table class="table">
+                <tr>
+                    <th>Nombres:</th>
+                    <td id="nombres"></td>
+                </tr>
+                <tr>
+                    <th>Apellidos:</th>
+                    <td id="apellidos"></td>
+                </tr>
+                <tr>
+                    <th>Email:</th>
+                    <td id="email"></td>
+                </tr>
+                <tr>
+                    <th>Teléfono:</th>
+                    <td id="telefono"></td>
+                </tr>
+                <tr>
+                    <th>Tipo de Suscripción:</th>
+                    <td id="tipo"></td>
+                </tr>
+                <tr>
+                    <th>Estado de Suscripción:</th>
+                    <td id="estado_suscripcion"></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS y dependencias -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+    <script src="static/js/script_suscripcion.js"></script>
+
+    <!-- Script para manejar el cierre de sesión -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const token = localStorage.getItem("token");
+    if (!token) {
+        // No hay token → redirigir a login
+        window.location.href = "/login_form";
+    }
+});
+</script>
+
+<script>
+document.getElementById("logoutLink").addEventListener("click", function(e) {
+    e.preventDefault();
+
+    // Limpiar el token
+    localStorage.removeItem("token");
+
+    // Redirigir y reemplazar el historial para evitar regresar con "atrás"
+    window.location.replace("/login_form");
+});
+</script>
+</body>
+</html>
